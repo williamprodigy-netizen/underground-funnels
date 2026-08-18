@@ -13,7 +13,7 @@ LIB_URL = "https://drive.google.com/drive/folders/15UP97tzwNZcZ00ugpnIkz17XFwDtk
 SOPHRON = "https://drive.google.com/drive/folders/1euhWFBWG8G7Nql_AzI3lL_AR4qDQ59QZ"
 
 NAV = [("index.html", "Overview"), ("boards.html", "Swipe boards"),
-       ("ads.html", "Ad creatives"), ("copy.html", "Copy bank")]
+       ("ads.html", "Ad creatives")]
 
 
 def shell(page, title, body, extra_head=""):
@@ -51,7 +51,7 @@ land = f"""
   <p class="sub">Every competitor funnel we have taken apart, every ad format worth copying, and every
   line of their copy &mdash; in one place, live, for the team.</p>
   {figs([(len(B), 'Funnels'), (steps, 'Pages mapped'), (f'{round(tw/1000)}k', 'Words transcribed'),
-         (len(A), 'Ad creatives'), (f'{len(C):,}', 'Copy lines')])}
+         (len(A), 'Ad creatives'), (len(AF), 'Ad formats')])}
 </header>
 
 <div class="cards">
@@ -61,9 +61,7 @@ land = f"""
   <a class="c" href="ads.html"><h3>Ad creatives</h3>
     <p>{len(A)} ads across {len(AF)} formats, ranked and tiered, each with its hook and a link to
     the footage in Drive.</p><span class="n">{len(AF)} formats &rarr;</span></a>
-  <a class="c" href="copy.html"><h3>Copy bank</h3>
-    <p>Headlines, CTAs, guarantees, prices and proof lines pulled straight off their pages.
-    Searchable.</p><span class="n">{len(C):,} lines &rarr;</span></a>
+
 </div>
 
 <div class="grp"><div class="grp-h"><h2>How to use it</h2></div>
@@ -71,8 +69,10 @@ land = f"""
 worth taking from it &mdash; read those first, they are the point. Open the board only when you want
 the wired canvas of their whole funnel.</p>
 <p class="mdl" style="margin-top:14px">Ad creatives are segmented by format in Drive, so if you need a
-green screen reference or a podcast-style ad, go straight to that folder. The copy bank is raw
-extraction &mdash; use it to find a phrasing, not to lift a whole page.</p></div></div>
+green screen reference or a podcast-style ad, go straight to that folder.</p>
+<p class="mdl" style="margin-top:12px">Each funnel&rsquo;s own copy bank &mdash; their headlines, CTAs,
+guarantees and proof lines &mdash; sits inside that funnel&rsquo;s swipe site, on its <b>Copy bank</b>
+tab. It is raw extraction: use it to find a phrasing, not to lift a page.</p></div></div>
 """
 open(os.path.join(HERE, "index.html"), "w").write(shell("index.html", "The Swipe Board", land))
 
@@ -118,32 +118,73 @@ def slug(n):
     return _r.sub(r"[^a-z0-9]+", "-", n.lower()).strip("-")
 
 
-toc = ""
+def card(x):
+    n = x['st']
+    bits = []
+    for v, l in ((n['pg'], 'pages'), (n['vid'], 'videos'), (n['tw'], 'words'),
+                 (n['em'], 'emails'), (n['ads'], 'ads')):
+        if v:
+            t = f"{v/1000:.1f}k".replace('.0k', 'k') if v >= 1000 else str(v)
+            bits.append(f'<b>{t}</b> {l}')
+    steps_html = "".join(
+        f'<a class="stp" href="{html.escape(st["u"])}" target="_blank" rel="noopener">'
+        f'<b>{html.escape(st["l"])}</b><span>'
+        f'{html.escape(st["u"].replace("https://","").replace("http://","").replace("www.","").split("?")[0])}'
+        f'</span></a>' for st in x['steps'])
+    det = (f'<details><summary><span class="car">&#9654;</span>Their funnel, step by step</summary>'
+           f'<div class="body">{steps_html}</div></details>') if steps_html else ""
+    return f"""<article class="fc" data-cat="{x['cat'] or 'other'}" data-new="{1 if x['new'] else 0}"
+ data-q="{html.escape((x['c'] + ' ' + x['o'] + ' ' + (x['steal'] or '') + ' ' + x['model']).lower())}">
+<div class="fc-h"><h3>{html.escape(x['c'])}</h3>{'<span class="new">New</span>' if x['new'] else ''}</div>
+<div class="fc-o">{html.escape(x['o'])}</div>
+{f'<p class="fc-s">{html.escape(x["steal"])}</p>' if x['steal'] else ''}
+<div class="fc-m">{html.escape(x['model']).replace('-&gt;', '&rarr;').replace('->', '&rarr;')}</div>
+<div class="fc-f"><div class="go">
+<a class="btn p" href="{x['board_live']}" target="_blank" rel="noopener">Board</a>
+<a class="btn" href="{x['live']}" target="_blank" rel="noopener">Swipe site</a></div>
+{f'<div class="nums">{"".join(bits)}</div>' if bits else ''}
+{det}</div></article>"""
+
+
+TYPES = [("all", "Everything"), ("vsl", "VSL &rarr; call"), ("webinar", "Webinar"),
+         ("challenge", "Challenge"), ("application", "Application"),
+         ("event", "Event"), ("low_ticket", "Low ticket"), ("new", "New")]
+counts = {}
+for k, _ in TYPES:
+    if k == "all":
+        counts[k] = len(B)
+    elif k == "new":
+        counts[k] = sum(1 for x in B if x['new'])
+    else:
+        counts[k] = sum(1 for x in B if (x['cat'] or 'other') == k)
+tabs = "".join(
+    f'<button class="tab" data-f="{k}" aria-pressed="{"true" if k=="all" else "false"}">{t}'
+    f'<b>{counts[k]}</b></button>' for k, t in TYPES if counts[k])
+
 secs = ""
 for k, t in GROUPS:
     rows = sorted([x for x in B if (x['cat'] or '') == k],
                   key=lambda y: (0 if y['steal'] else 1, y['c']))
     if not rows:
         continue
-    gid = slug(t)
-    toc += (f'<div class="toc-g"><h3>{html.escape(t)} <em>{len(rows)}</em></h3><ol>' +
-            "".join(f'<li><a href="#{slug(x["c"])}">{html.escape(x["c"])}</a>'
-                    f'<span>{html.escape((x["steal"] or x["o"] or "")[:64])}</span></li>' for x in rows) +
-            '</ol></div>')
-    secs += (f'<section class="grp" id="{gid}"><div class="grp-h"><h2>{html.escape(t)}</h2>'
-             f'<span>{len(rows)}</span></div>' + "".join(board_entry(x) for x in rows) + '</section>')
+    secs += (f'<section class="grp" data-sec="{k or "other"}" id="{slug(t)}">'
+             f'<div class="grp-h"><h2>{html.escape(t)}</h2><span>{len(rows)}</span></div>'
+             f'<div class="fgrid">' + "".join(card(x) for x in rows) + '</div></section>')
 
 boards = f"""
 <header>
   <div class="kick">Underground Funnels</div>
   <h1>Swipe Boards</h1>
-  <p class="sub">The competitor funnels we have taken apart page by page &mdash; what each one does
-  that is worth stealing, and the wired board behind it.</p>
-  {figs([(len(B), 'Funnels'), (steps, 'Pages mapped'), (f'{round(tw/1000)}k', 'Words')])}
+  <p class="sub">Pick a funnel type, then pick a funnel. Each one opens with the single thing worth
+  stealing from it.</p>
 </header>
-<section class="toc"><div class="grp-h"><h2>Contents</h2><span>{len(B)} funnels</span></div>
-<div class="toc-w">{toc}</div></section>
+<div class="bar"><div class="bar-in">
+  <input type="search" id="q" placeholder="Search 38 funnels&hellip;" aria-label="Search funnels">
+</div><div class="tabs-row">{tabs}</div></div>
+<div id="hits"></div>
 {secs}
+<div class="none" id="none" hidden>Nothing matches that.</div>
+<script src="boards.js"></script>
 """
 open(os.path.join(HERE, "boards.html"), "w").write(shell("boards.html", "Swipe Boards", boards))
 
@@ -185,25 +226,4 @@ same {len(AF)} folders you see below.</p>
 """
 open(os.path.join(HERE, "ads.html"), "w").write(shell("ads.html", "Ad Creatives", ads_page))
 
-# ---------------------------------------------------------------- copy
-copy_page = f"""
-<header>
-  <div class="kick">Underground Funnels</div>
-  <h1>Copy Bank</h1>
-  <p class="sub">Every headline, CTA, price, guarantee and proof line pulled off the captured pages of
-  27 competitor funnels &mdash; searchable, with the page it came from.</p>
-  <div class="warn"><b>Read this first.</b> These lines are machine-extracted from their live pages,
-  unedited. Nothing is curated or approved &mdash; the guarantees bank in particular mixes real offers
-  with legal disclaimers. Raw ore, not a finished swipe.</div>
-</header>
-<div class="bar"><div class="bar-in">
-  <input type="search" id="q" placeholder="Search every line&hellip;" aria-label="Search copy">
-  <select id="who" aria-label="Filter by competitor"></select>
-</div><div class="bar-in" style="margin-top:9px" id="banks"></div></div>
-<div id="count"></div><main id="out"></main>
-<div class="none" id="none" hidden>Nothing matches that.</div>
-<script>const C = {json.dumps(C, ensure_ascii=False)};</script>
-<script src="copy.js"></script>
-"""
-open(os.path.join(HERE, "copy.html"), "w").write(shell("copy.html", "Copy Bank", copy_page))
-print("built index.html, boards.html, ads.html, copy.html")
+print("built index.html, boards.html, ads.html")
