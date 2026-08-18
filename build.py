@@ -78,7 +78,8 @@ open(os.path.join(HERE, "index.html"), "w").write(shell("index.html", "The Swipe
 # ---------------------------------------------------------------- boards
 GROUPS = [("vsl", "VSL to a call"), ("webinar", "Webinar"), ("challenge", "Challenge"),
           ("application", "Straight to application"), ("event", "Event"),
-          ("low_ticket", "Low ticket"), ("", "Other")]
+          ("low_ticket", "Low ticket"), ("community_low_ticket", "Community"),
+          ("quiz", "Quiz"), ("", "Other")]
 
 
 def board_entry(x):
@@ -147,7 +148,8 @@ def card(x):
 
 TYPES = [("all", "Everything"), ("vsl", "VSL &rarr; call"), ("webinar", "Webinar"),
          ("challenge", "Challenge"), ("application", "Application"),
-         ("event", "Event"), ("low_ticket", "Low ticket"), ("new", "New")]
+         ("community_low_ticket", "Community"), ("event", "Event"),
+         ("low_ticket", "Low ticket"), ("quiz", "Quiz"), ("new", "New")]
 counts = {}
 for k, _ in TYPES:
     if k == "all":
