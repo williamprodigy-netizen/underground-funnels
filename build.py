@@ -24,7 +24,7 @@ def shell(page, title, body, extra_head=""):
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(title)} · Underground Funnels</title>
-<link rel="stylesheet" href="style.css">{extra_head}
+<link rel="icon" href="favicon.png"><link rel="stylesheet" href="style.css">{extra_head}
 </head><body>
 <div class="w">
 <nav class="top">{nav}</nav>
