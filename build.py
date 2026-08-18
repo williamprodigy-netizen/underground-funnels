@@ -10,7 +10,6 @@ AF = json.loads(_a.split('const AF = ')[1].strip().rstrip(';'))
 C = json.loads(open('/tmp/copybank2.js').read()[len('const C = '):].strip().rstrip(';'))
 
 LIB_URL = "https://drive.google.com/drive/folders/15UP97tzwNZcZ00ugpnIkz17XFwDtkRqn"
-SOPHRON = "https://drive.google.com/drive/folders/1euhWFBWG8G7Nql_AzI3lL_AR4qDQ59QZ"
 
 NAV = [("index.html", "Overview"), ("boards.html", "Swipe boards"),
        ("ads.html", "Ad creatives")]
@@ -189,41 +188,79 @@ boards = f"""
 open(os.path.join(HERE, "boards.html"), "w").write(shell("boards.html", "Swipe Boards", boards))
 
 # ---------------------------------------------------------------- ads
-fmt_secs = ""
+import json as _json
+
+BLURB = {
+ "01 GREEN SCREEN": "Presenter in front of a keyed background, usually reacting to a screenshot or headline.",
+ "02 PODCAST": "Two people at mics. Borrowed credibility and a conversation you are overhearing.",
+ "03 TALKING HEAD + BROLL": "Straight to camera, cut with footage that proves each claim.",
+ "04 WHITEBOARD": "Drawing the mechanism while explaining it. Slow, high-trust, teaches to sell.",
+ "05 ZOOM ROOM": "Screen-share or call recording. Feels like being shown something private.",
+ "06 TESTIMONIAL": "The customer does the selling. Named person, specific number.",
+ "07 BREAKING NEWS + 3RD PERSON": "Framed as a report about the offer rather than an ad for it.",
+ "08 INTERVIEW STYLE": "Question and answer. The interviewer asks the objection out loud.",
+ "09 TWIN": "Same person twice on screen, arguing both sides of the decision.",
+ "10 COMEDY + SKITS": "Sketch first, offer second. Buys attention before it asks for it.",
+ "11 LIFESTYLE": "The outcome shown, not described. Sells the after, never the mechanism.",
+ "12 OUTDOORS + WALKING": "Walk-and-talk. Reads as unscripted and off the cuff.",
+ "13 BROLL VOICE OVER": "No presenter at all. Voice over footage, cheapest format to produce.",
+}
+
+fmt_cards, fmt_secs = "", ""
 for f in sorted(AF):
     rows = sorted([a for a in A if a['f'] == f], key=lambda y: y['r'])
     if not rows:
         continue
-    fid = AF[f]
+    fid, num, label = AF[f], f[:2], f[3:].title()
+    stier = sum(1 for a in rows if a['t'] == 'S')
+    avg = round(sum(a['d'] for a in rows) / len(rows))
+    fmt_cards += (
+        f'<button class="fmtc" data-f="{html.escape(f)}">'
+        f'<span class="fnum">{num}</span><h3>{html.escape(label)}</h3>'
+        f'<p>{html.escape(BLURB.get(f, ""))}</p>'
+        f'<span class="fmeta">{len(rows)} ads &middot; {stier} S-tier &middot; ~{avg}s avg</span></button>')
     ads = "".join(
-        f'<div class="ad"><span class="tier {html.escape(a["t"])}">{html.escape(a["t"])}</span>'
+        f'<div class="ad" data-t="{html.escape(a["t"])}" '
+        f'data-q="{html.escape((a["h"] + " " + a["b"]).lower())}">'
+        f'<span class="tier {html.escape(a["t"])}">{html.escape(a["t"])}</span>'
         f'<p><a href="{html.escape(a["u"])}" target="_blank" rel="noopener">{html.escape(a["h"])}</a></p>'
         f'<div class="meta"><b>{html.escape(a["b"])}</b>{a["d"]}s</div></div>' for a in rows)
-    fmt_secs += (f'<section class="fmt" id="f{f[:2]}"><div class="fmt-h"><h2>{html.escape(f)}</h2>'
-                 f'<a class="dl" href="https://drive.google.com/drive/folders/{fid}" target="_blank" '
-                 f'rel="noopener">Footage in Drive &rarr;</a></div>{ads}</section>')
+    fmt_secs += (
+        f'<section class="fmt" data-f="{html.escape(f)}" hidden>'
+        f'<div class="fmt-h"><h2><span class="fnum">{num}</span>{html.escape(label)}</h2>'
+        f'<a class="dl" href="https://drive.google.com/drive/folders/{fid}" target="_blank" '
+        f'rel="noopener">Footage in Drive &rarr;</a></div>'
+        f'<p class="fmt-b">{html.escape(BLURB.get(f, ""))}</p>{ads}</section>')
 
-jump = " ".join(f'<a class="btn" href="#f{f[:2]}">{html.escape(f[3:].title())}</a>' for f in sorted(AF))
 ads_page = f"""
 <header>
   <div class="kick">Underground Funnels</div>
   <h1>Ad Creatives</h1>
-  <p class="sub">{len(A)} ads across {len(AF)} formats, tiered and ranked. The hook is the line that
-  opens it &mdash; click any hook to see the ad, or jump to the footage in Drive.</p>
+  <p class="sub">{len(A)} ads sorted into {len(AF)} formats. Pick a format to see its ten, or search
+  every hook at once.</p>
   {figs([(len(A), 'Ads'), (len(AF), 'Formats'), (len(set(a['b'] for a in A)), 'Brands'),
          (sum(1 for a in A if a['t'] == 'S'), 'S tier')])}
-  <div class="warn"><b>Tier is our read, not theirs.</b> S is a format worth copying now, A is worth a
-  test, B is reference. Every ad links out to Foreplay for the full creative.</div>
 </header>
-<div class="grp"><div class="grp-h"><h2>The library in Drive</h2></div>
-<div class="e"><p class="steal">All footage lives in <b>AD FORMAT LIBRARY</b>, segmented into the
-same {len(AF)} folders you see below.</p>
-<div class="go"><a class="btn p" href="{LIB_URL}" target="_blank" rel="noopener">Open AD FORMAT LIBRARY</a>
-<a class="btn" href="{SOPHRON}" target="_blank" rel="noopener">63 Ad Format Swipe File (Sophron)</a></div></div></div>
-<div class="grp"><div class="grp-h"><h2>Jump to a format</h2></div>
-<div class="e"><div class="go">{jump}</div></div></div>
+
+<div class="bar"><div class="bar-in">
+  <input type="search" id="q" placeholder="Search every hook&hellip;" aria-label="Search hooks">
+  <button class="tab" data-t="all" aria-pressed="true">All tiers</button>
+  <button class="tab" data-t="S" aria-pressed="false">S</button>
+  <button class="tab" data-t="A" aria-pressed="false">A</button>
+  <button class="tab" data-t="B" aria-pressed="false">B</button>
+  <button class="tab back" id="back" hidden>&larr; All formats</button>
+</div></div>
+
+<div id="lib"><div class="grp"><div class="grp-h"><h2>The library in Drive</h2></div>
+<div class="e"><p class="steal">All footage sits in <b>AD FORMAT LIBRARY</b>, in the same {len(AF)}
+folders below. Tier is our read: <b>S</b> copy now, <b>A</b> worth a test, <b>B</b> reference.</p>
+<div class="go"><a class="btn p" href="{LIB_URL}" target="_blank" rel="noopener">Open the library in Drive</a></div></div></div>
+<div class="fmtgrid">{fmt_cards}</div></div>
+
+<div id="hits" hidden></div>
 {fmt_secs}
+<div class="none" id="none" hidden>No hook matches that.</div>
+<script src="ads.js"></script>
 """
 open(os.path.join(HERE, "ads.html"), "w").write(shell("ads.html", "Ad Creatives", ads_page))
-
 print("built index.html, boards.html, ads.html")

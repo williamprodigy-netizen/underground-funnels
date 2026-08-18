@@ -221,3 +221,20 @@ footer{margin-top:64px; padding-top:22px; border-top:1px solid var(--rule);
 .fc-f{margin-top:auto; padding-top:14px}
 .grp[hidden]{display:none}
 @media (max-width:640px){.fgrid{grid-template-columns:1fr}}
+
+/* ---- ad format picker ---- */
+.fmtgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:13px; margin-top:26px}
+.fmtc{text-align:left; background:var(--card); border:1px solid var(--rule); border-radius:8px;
+  padding:18px 19px; cursor:pointer; font-family:inherit; color:var(--ink); display:block}
+.fmtc:hover{border-color:var(--mark); background:var(--mark-soft)}
+.fnum{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:10.5px;
+  font-weight:700; letter-spacing:.12em; color:var(--mark); display:block; margin-bottom:5px}
+.fmtc h3{font-size:19px; font-weight:600; letter-spacing:-.01em}
+.fmtc p{margin:6px 0 0; font-size:14px; color:var(--muted); line-height:1.4}
+.fmeta{display:block; margin-top:11px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); font-weight:600}
+.fmt-h h2 .fnum{display:inline; margin-right:9px}
+.fmt-b{margin:6px 0 14px; font-size:15px; color:var(--muted)}
+.tab.back{border-color:var(--mark); color:var(--mark)}
+.ad[hidden]{display:none}
+section.fmt[hidden]{display:none}
